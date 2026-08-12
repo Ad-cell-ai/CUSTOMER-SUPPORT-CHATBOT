@@ -11,4 +11,4 @@ to appropriate customer support channels.
 | Prashant Jaiswal | Team Leader, Presenter, Database / Product Knowledge |
 | Aditya Yadav | LLM / Chatbot Logic |
 | Yash Pratap Pal | Frontend / UI |
-| Kushagr Kumar Anant | Backend / API |
+| Kushagra Kumar Anant | Backend / API |
