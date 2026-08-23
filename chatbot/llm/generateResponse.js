@@ -1,15 +1,13 @@
-import client from "./client.js";
+import ai from "./client.js";
+import { buildPrompt } from "../utils/formatter.js";
 
-export async function generateResponse(prompt) {
-  try {
-    const response = await client.responses.create({
-      model: "gpt-5",
-      input: prompt,
-    });
+export async function generateResponse(userQuestion, data) {
+  const prompt = buildPrompt(userQuestion, data);
 
-    return response.output_text;
-  } catch (error) {
-    console.error("OpenAI Error:", error);
-    return "Sorry, I couldn't process your request.";
-  }
+  const response = await ai.models.generateContent({
+    model: "gemini-3.6-flash",
+    contents: prompt,
+  });
+
+  return response.text;
 }

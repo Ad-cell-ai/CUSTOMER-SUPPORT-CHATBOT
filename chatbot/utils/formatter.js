@@ -1,12 +1,16 @@
-export function buildPrompt(data, userQuestion){
+export function buildPrompt(userQuestion, data) {
+  return `
+You are an AI customer support assistant.
 
-return `
+Answer ONLY using the data below.
+
 Data:
-${JSON.stringify(data)}
+${JSON.stringify(data, null, 2)}
 
-Question:
+Customer Question:
 ${userQuestion}
 
-Answer only using the data above.
+If the answer is not available in the data, reply:
+"I couldn't find that information in the database."
 `;
 }

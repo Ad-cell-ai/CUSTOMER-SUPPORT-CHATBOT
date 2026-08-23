@@ -1,7 +1,15 @@
-import { generateResponse } from "./llm/generateResponse.js";
+import { generateResponse } from "./chatbot/llm/generateResponse.js";
+
+const product = {
+  name: "iPhone 16",
+  price: "₹79,900",
+  stock: "In Stock",
+  warranty: "1 Year"
+};
 
 const reply = await generateResponse(
-  "Say hello in one sentence."
+  "What is the price of iPhone 16?",
+  product
 );
 
 console.log(reply);

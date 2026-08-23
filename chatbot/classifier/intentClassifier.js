@@ -1,18 +1,10 @@
 export function classifyIntent(message) {
+  const text = message.toLowerCase();
 
-    message = message.toLowerCase();
+  if (text.includes("price")) return "product_price";
+  if (text.includes("stock")) return "product_stock";
+  if (text.includes("order")) return "order_status";
+  if (text.includes("return")) return "return_policy";
 
-    if(message.includes("price"))
-        return "product_price";
-
-    if(message.includes("stock"))
-        return "product_availability";
-
-    if(message.includes("order"))
-        return "order_status";
-
-    if(message.includes("return"))
-        return "return_policy";
-
-    return "unknown";
+  return "unknown";
 }
