@@ -1,13 +1,20 @@
-import ai from "./client.js";
-import { buildPrompt } from "../utils/formatter.js";
+import { generateResponse } from "./chatbot/llm/generateResponse.js";
 
-export async function generateResponse(userQuestion, data) {
-  const prompt = buildPrompt(userQuestion, data);
+const response = await fetch("http://localhost:5000/api/chat", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    message: "What is the price of iPhone 16?",
+  }),
+});
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
-    contents: prompt,
-  });
+const data = await response.json();
 
-  return response.text;
-}
+const reply = await generateResponse(
+  "What is the price of iPhone 16?",
+  data.response
+);
+
+console.log(reply);
