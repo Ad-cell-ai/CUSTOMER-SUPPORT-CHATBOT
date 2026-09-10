@@ -1,20 +1,47 @@
 [
-    {
-        "productId": "P001",
-        "companyId": "COMP001",
-        "name": "iPhone 16",
-        "price": 79900,
-        "stock": 45,
-        "category": "Smartphone",
-        "description": "128GB, Black"
-    },
-    {
-        "productId": "P002",
-        "companyId": "COMP001",
-        "name": "Samsung Galaxy S25",
-        "price": 74999,
-        "stock": 20,
-        "category": "Smartphone",
-        "description": "256GB, Silver"
-    }
+  {
+    "name": "iPhone 16",
+    "category": "Smartphone",
+    "price": 79900,
+    "stock": 20,
+    "description": "Apple iPhone 16 128GB Black",
+    "brand": "Apple",
+    "warranty": "1 Year"
+  },
+  {
+    "name": "Samsung Galaxy S25",
+    "category": "Smartphone",
+    "price": 74999,
+    "stock": 15,
+    "description": "Samsung Galaxy S25 256GB",
+    "brand": "Samsung",
+    "warranty": "1 Year"
+  },
+  {
+    "name": "OnePlus 13",
+    "category": "Smartphone",
+    "price": 69999,
+    "stock": 10,
+    "description": "OnePlus 13 256GB",
+    "brand": "OnePlus",
+    "warranty": "1 Year"
+  },
+  {
+    "name": "Dell Inspiron 15",
+    "category": "Laptop",
+    "price": 62999,
+    "stock": 8,
+    "description": "15-inch Intel Core i5 Laptop",
+    "brand": "Dell",
+    "warranty": "2 Years"
+  },
+  {
+    "name": "Sony WH-1000XM5",
+    "category": "Headphones",
+    "price": 29999,
+    "stock": 12,
+    "description": "Wireless Noise Cancelling Headphones",
+    "brand": "Sony",
+    "warranty": "1 Year"
+  }
 ]

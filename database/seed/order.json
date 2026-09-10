@@ -1,0 +1,26 @@
+[
+  {
+    "orderId": "ORD1001",
+    "userId": "USER_OBJECT_ID",
+    "productId": "PRODUCT_OBJECT_ID",
+    "quantity": 1,
+    "totalPrice": 79900,
+    "status": "Delivered"
+  },
+  {
+    "orderId": "ORD1002",
+    "userId": "USER_OBJECT_ID",
+    "productId": "PRODUCT_OBJECT_ID",
+    "quantity": 2,
+    "totalPrice": 149998,
+    "status": "Shipped"
+  },
+  {
+    "orderId": "ORD1003",
+    "userId": "USER_OBJECT_ID",
+    "productId": "PRODUCT_OBJECT_ID",
+    "quantity": 1,
+    "totalPrice": 69999,
+    "status": "Pending"
+  }
+]
