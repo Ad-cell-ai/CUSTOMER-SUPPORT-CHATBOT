@@ -1,0 +1,20 @@
+[
+    {
+        "productId": "P001",
+        "companyId": "COMP001",
+        "name": "iPhone 16",
+        "price": 79900,
+        "stock": 45,
+        "category": "Smartphone",
+        "description": "128GB, Black"
+    },
+    {
+        "productId": "P002",
+        "companyId": "COMP001",
+        "name": "Samsung Galaxy S25",
+        "price": 74999,
+        "stock": 20,
+        "category": "Smartphone",
+        "description": "256GB, Silver"
+    }
+]
