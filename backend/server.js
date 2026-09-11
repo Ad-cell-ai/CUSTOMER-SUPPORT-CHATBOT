@@ -5,6 +5,10 @@ import chatRoutes from "./routes/chatRoutes.js"; // adjust if your filename is d
 
 dotenv.config();
 
+console.log(process.env.MONGODB_URI);
+import dns from 'node:dns';
+dns.setServers(['8.8.8.8', '8.8.4.4']); 
+
 connectDB();
 
 const app = express();
