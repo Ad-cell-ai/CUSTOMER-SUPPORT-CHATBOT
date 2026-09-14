@@ -9,6 +9,10 @@ const faqSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  category: {
+    type: String,
+    default: "",
+  },
 });
 
 const FAQ = mongoose.model("FAQ", faqSchema);

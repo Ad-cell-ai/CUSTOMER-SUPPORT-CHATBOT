@@ -8,7 +8,8 @@ dotenv.config();
 console.log(process.env.MONGODB_URI);
 import dns from 'node:dns';
 dns.setServers(['8.8.8.8', '8.8.4.4']); 
-
+console.log(process.env);
+console.log(process.env.MONGODB_URI);
 connectDB();
 
 const app = express();

@@ -14,10 +14,24 @@ export const chatController = async (req, res) => {
     }
 
     const userMessage = req.body.message.toLowerCase().trim();
+    console.log("User Message:", userMessage);
 
-    // ---------- PRODUCT SEARCH ----------
-    const products = await Product.find();
+    // Fetch products
+   const products = await Product.find();
 
+    console.log("User Message:", userMessage);
+    console.log("Products Count:", products.length);
+    console.log("Products:", products);
+    console.log("Collection:", Product.collection.name);
+
+    products.forEach((p) => {
+      console.log(
+        p.name.toLowerCase(),
+        userMessage.includes(p.name.toLowerCase())
+      );
+    });
+
+    // Product search
     const product = products.find((p) =>
       userMessage.includes(p.name.toLowerCase())
     );
@@ -26,23 +40,28 @@ export const chatController = async (req, res) => {
       return res.json({
         success: true,
         response: `The price of ${product.name} is ₹${product.price}. It is currently ${
-          product.stock > 0 ? `in stock (${product.stock} available).` : "out of stock."
+          product.stock > 0
+            ? `in stock (${product.stock} available).`
+            : "out of stock."
         }`,
       });
     }
 
-    // ---------- FAQ SEARCH ----------
+    // FAQ search
     const faqs = await FAQ.find();
 
-    const faq = faqs.find((f) => {
-      const question = f.question.toLowerCase();
+const faq = faqs.find((f) => {
+  const question = (f.question || "").toLowerCase();
+  const category = (f.category || "").toLowerCase();
 
-      return (
-        userMessage.includes(question) ||
-        question.includes(userMessage) ||
-        userMessage.includes(f.category.toLowerCase())
-      );
-    });
+  return (
+    userMessage.includes(question) ||
+    question.includes(userMessage) ||
+    (category && userMessage.includes(category))
+  );
+});
+
+   
 
     if (faq) {
       return res.json({
