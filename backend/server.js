@@ -1,20 +1,24 @@
 import express from "express";
+import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
-import chatRoutes from "./routes/chatRoutes.js"; // adjust if your filename is different
+import chatRoutes from "./routes/chatRoutes.js";
 
 dotenv.config();
 
-console.log(process.env.MONGODB_URI);
-import dns from 'node:dns';
-dns.setServers(['8.8.8.8', '8.8.4.4']); 
-console.log(process.env);
-console.log(process.env.MONGODB_URI);
-connectDB()
-
 const app = express();
 
+// Middleware (BEFORE routes and app.listen)
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "*",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"],
+}));
+
 app.use(express.json());
+
+// Database connection
+connectDB();
 
 // Routes
 app.use("/api/chat", chatRoutes);
@@ -28,16 +32,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-import cors from "cors";
-
-
-
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
-
-app.use(express.json());

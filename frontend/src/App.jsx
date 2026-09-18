@@ -2,36 +2,52 @@ import { useState } from "react";
 import axios from "axios";
 import "./App.css";
 
-// Replace this with your Render backend URL
-const API_URL ="https://customer-support-chatbot-gf37.onrender.com/api/chat";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/chat";
 
 function App() {
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const sendMessage = async () => {
-  try {
-    const res = await axios.post(
-      "https://customer-support-chatbot-gf37.onrender.com/api/chat",
-      {
-        message: message,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
+    if (!message.trim()) {
+      setReply("Please enter a message.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await axios.post(
+        API_URL,
+        {
+          message: message,
         },
-      }
-    );
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-    setReply(res.data.response);
-  } catch (err) {
-    console.log(err);
-    console.log(err.response);
-    console.log(err.message);
+      setReply(res.data.response);
+      setMessage("");
+    } catch (err) {
+      console.error("Error:", err);
+      setReply(
+        err.response?.data?.message ||
+        err.message ||
+        "Unable to connect to the server. Make sure the backend is running."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setReply(err.message);
-  }
-};
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !loading) {
+      sendMessage();
+    }
+  };
 
   return (
     <div className="container">
@@ -42,10 +58,12 @@ function App() {
         placeholder="Ask your question..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
+        onKeyPress={handleKeyPress}
+        disabled={loading}
       />
 
-      <button onClick={sendMessage}>
-        Send
+      <button onClick={sendMessage} disabled={loading}>
+        {loading ? "Sending..." : "Send"}
       </button>
 
       <div className="response">

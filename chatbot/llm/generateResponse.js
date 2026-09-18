@@ -1,20 +1,33 @@
-import { generateResponse } from "./chatbot/llm/generateResponse.js";
+import ai from "./client.js";
 
-const response = await fetch("http://localhost:5000/api/chat", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    message: "What is the price of iPhone 16?",
-  }),
-});
+export async function generateResponse(userMessage, data) {
+  try {
+    const systemPrompt = `You are a helpful customer support assistant. Answer the following question based on the provided data. If the information is not available, say so clearly.
 
-const data = await response.json();
+Data:
+${JSON.stringify(data, null, 2)}`;
 
-const reply = await generateResponse(
-  "What is the price of iPhone 16?",
-  data.response
-);
+    const model = ai.generativeModel("gemini-1.5-flash");
+    
+    const response = await model.generateContent({
+      systemInstruction: systemPrompt,
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: userMessage }],
+        },
+      ],
+    });
 
-console.log(reply);
+    const textContent = response.response.candidates[0]?.content?.parts[0]?.text;
+    
+    if (!textContent) {
+      return "I couldn't process that request. Please try again.";
+    }
+
+    return textContent;
+  } catch (error) {
+    console.error("LLM generation error:", error.message);
+    return "I'm experiencing technical difficulties. Please try again later.";
+  }
+}

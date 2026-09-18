@@ -1,36 +1,15 @@
-import { validationResult } from "express-validator";
 import Product from "../models/Product.js";
 import FAQ from "../models/FAQ.js";
+import { getChatbotReply } from "../services/chatbotServices.js";
 
 export const chatController = async (req, res) => {
   try {
-    const errors = validationResult(req);
-
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array(),
-      });
-    }
-
     const userMessage = req.body.message.toLowerCase().trim();
-    console.log("User Message:", userMessage);
+    console.log("User query:", userMessage);
 
     // Fetch products
-   const products = await Product.find();
-
-    console.log("User Message:", userMessage);
-    console.log("Products Count:", products.length);
-    console.log("Products:", products);
-    console.log("Collection:", Product.collection.name);
-
-    products.forEach((p) => {
-      console.log(
-        p.name.toLowerCase(),
-        userMessage.includes(p.name.toLowerCase())
-      );
-    });
-
+    const products = await Product.find();
+    
     // Product search
     const product = products.find((p) =>
       userMessage.includes(p.name.toLowerCase())
@@ -49,19 +28,16 @@ export const chatController = async (req, res) => {
 
     // FAQ search
     const faqs = await FAQ.find();
+    const faq = faqs.find((f) => {
+      const question = (f.question || "").toLowerCase();
+      const category = (f.category || "").toLowerCase();
 
-const faq = faqs.find((f) => {
-  const question = (f.question || "").toLowerCase();
-  const category = (f.category || "").toLowerCase();
-
-  return (
-    userMessage.includes(question) ||
-    question.includes(userMessage) ||
-    (category && userMessage.includes(category))
-  );
-});
-
-   
+      return (
+        userMessage.includes(question) ||
+        question.includes(userMessage) ||
+        (category && userMessage.includes(category))
+      );
+    });
 
     if (faq) {
       return res.json({
@@ -70,13 +46,28 @@ const faq = faqs.find((f) => {
       });
     }
 
-    return res.json({
-      success: false,
-      response: "Sorry, I couldn't find the requested information.",
-    });
+    // Fallback to LLM if no FAQ/Product match
+    try {
+      const relevantData = {
+        products: products.map(p => ({ name: p.name, price: p.price, stock: p.stock })),
+        faqs: faqs.map(f => ({ question: f.question, answer: f.answer }))
+      };
+      
+      const llmResponse = await getChatbotReply(req.body.message, relevantData);
+      
+      return res.json({
+        success: true,
+        response: llmResponse,
+      });
+    } catch (llmError) {
+      console.error("LLM fallback failed:", llmError.message);
+      return res.json({
+        success: false,
+        response: "Sorry, I couldn't find the requested information. Please contact our support team.",
+      });
+    }
   } catch (err) {
-    console.error(err);
-
+    console.error("Chat controller error:", err);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
