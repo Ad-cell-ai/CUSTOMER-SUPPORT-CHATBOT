@@ -22,9 +22,9 @@ ${JSON.stringify(data, null, 2)}
       response.text ||
       "I couldn't process your request. Please try again."
     );
-  } catch (error) {
-    console.error("LLM generation error:", error);
+  }catch (error) {
+  console.error("LLM generation error:", error);
 
-    return "I'm experiencing technical difficulties. Please try again later.";
-  }
+  return `LLM Error: ${error.message}`;
+}
 }
