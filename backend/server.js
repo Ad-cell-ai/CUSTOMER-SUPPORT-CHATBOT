@@ -13,25 +13,6 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://Ad-cell-ai.github.io"
-    ],
-    methods: ["GET", "POST"],
-    credentials: false,
-  })
-);
-
-app.use(express.json());
-
-// Connect to MongoDB
-connectDB();
-
-// Routes
-import cors from "cors";
-
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
       "https://ad-cell-ai.github.io"
     ],
     methods: ["GET", "POST", "OPTIONS"],
@@ -39,7 +20,13 @@ app.use(
   })
 );
 
-app.options("*", cors());
+app.use(express.json());
+
+// Connect Database
+connectDB();
+
+// Routes
+app.use("/api/chat", chatRoutes);
 
 app.get("/", (req, res) => {
   res.send("Customer Support Chatbot API is running...");
