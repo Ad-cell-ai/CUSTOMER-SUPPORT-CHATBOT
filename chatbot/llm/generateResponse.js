@@ -2,32 +2,29 @@ import ai from "./client.js";
 
 export async function generateResponse(userMessage, data) {
   try {
-    const systemPrompt = `You are a helpful customer support assistant. Answer the following question based on the provided data. If the information is not available, say so clearly.
+    const systemPrompt = `
+You are a helpful customer support assistant.
 
-Data:
-${JSON.stringify(data, null, 2)}`;
+Answer the user's question using ONLY the provided data.
 
-    const model = ai.generativeModel("gemini-1.5-flash");
-    
-    const response = await model.generateContent({
-      systemInstruction: systemPrompt,
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: userMessage }],
-        },
-      ],
+If the answer is not available in the data, politely say you don't have that information.
+
+Available Data:
+${JSON.stringify(data, null, 2)}
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `${systemPrompt}\n\nUser: ${userMessage}`,
     });
 
-    const textContent = response.response.candidates[0]?.content?.parts[0]?.text;
-    
-    if (!textContent) {
-      return "I couldn't process that request. Please try again.";
-    }
-
-    return textContent;
+    return (
+      response.text ||
+      "I couldn't process your request. Please try again."
+    );
   } catch (error) {
-    console.error("LLM generation error:", error.message);
+    console.error("LLM generation error:", error);
+
     return "I'm experiencing technical difficulties. Please try again later.";
   }
 }

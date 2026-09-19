@@ -5,11 +5,10 @@ import { getChatbotReply } from "../services/chatbotServices.js";
 export const chatController = async (req, res) => {
   try {
     const userMessage = req.body.message.toLowerCase().trim();
-    console.log("User query:", userMessage);
 
     // Fetch products
     const products = await Product.find();
-    
+
     // Product search
     const product = products.find((p) =>
       userMessage.includes(p.name.toLowerCase())
@@ -28,6 +27,7 @@ export const chatController = async (req, res) => {
 
     // FAQ search
     const faqs = await FAQ.find();
+
     const faq = faqs.find((f) => {
       const question = (f.question || "").toLowerCase();
       const category = (f.category || "").toLowerCase();
@@ -46,28 +46,31 @@ export const chatController = async (req, res) => {
       });
     }
 
-    // Fallback to LLM if no FAQ/Product match
-    try {
-      const relevantData = {
-        products: products.map(p => ({ name: p.name, price: p.price, stock: p.stock })),
-        faqs: faqs.map(f => ({ question: f.question, answer: f.answer }))
-      };
-      
-      const llmResponse = await getChatbotReply(req.body.message, relevantData);
-      
-      return res.json({
-        success: true,
-        response: llmResponse,
-      });
-    } catch (llmError) {
-      console.error("LLM fallback failed:", llmError.message);
-      return res.json({
-        success: false,
-        response: "Sorry, I couldn't find the requested information. Please contact our support team.",
-      });
-    }
+    // AI fallback
+    const relevantData = {
+      products: products.map((p) => ({
+        name: p.name,
+        price: p.price,
+        stock: p.stock,
+      })),
+      faqs: faqs.map((f) => ({
+        question: f.question,
+        answer: f.answer,
+      })),
+    };
+
+    const llmResponse = await getChatbotReply(
+      req.body.message,
+      relevantData
+    );
+
+    return res.json({
+      success: true,
+      response: llmResponse,
+    });
   } catch (err) {
     console.error("Chat controller error:", err);
+
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
