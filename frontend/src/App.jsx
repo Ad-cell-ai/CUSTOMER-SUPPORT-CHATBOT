@@ -53,7 +53,9 @@ function App() {
 
   return (
     <div className="container">
-      <h1>🤖 Customer Support Chatbot</h1>
+      <h1>
+  🤖 <span>Customer Support Chatbot</span>
+</h1>
 
       <input
         type="text"
