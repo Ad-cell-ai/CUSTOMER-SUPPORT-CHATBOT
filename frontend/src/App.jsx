@@ -52,9 +52,10 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <h1>
-  🤖 <span>Customer Support Chatbot</span>
+     <div>
+     <h1 className="title">
+  <span>🤖</span>
+  <span>Customer Support Chatbot</span>
 </h1>
 
       <input
