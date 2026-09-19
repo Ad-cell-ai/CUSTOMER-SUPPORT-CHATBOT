@@ -26,17 +26,20 @@ app.use(express.json());
 connectDB();
 
 // Routes
+import cors from "cors";
+
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://ad-cell-ai.github.io",
-      "https://ad-cell-ai.github.io/CUSTOMER-SUPPORT-CHATBOT"
+      "https://ad-cell-ai.github.io"
     ],
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type"],
   })
 );
+
+app.options("*", cors());
 
 app.get("/", (req, res) => {
   res.send("Customer Support Chatbot API is running...");
