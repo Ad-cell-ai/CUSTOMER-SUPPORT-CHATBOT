@@ -2,7 +2,8 @@ import { useState } from "react";
 import axios from "axios";
 import "./App.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/chat";
+const API_URL =
+  "https://customer-support-chatbot-gf37.onrender.com/api/chat";
 
 function App() {
   const [message, setMessage] = useState("");
@@ -16,12 +17,11 @@ function App() {
     }
 
     setLoading(true);
+
     try {
       const res = await axios.post(
         API_URL,
-        {
-          message: message,
-        },
+        { message },
         {
           headers: {
             "Content-Type": "application/json",
@@ -32,18 +32,20 @@ function App() {
       setReply(res.data.response);
       setMessage("");
     } catch (err) {
-      console.error("Error:", err);
+      console.error(err);
+
       setReply(
-        err.response?.data?.message ||
-        err.message ||
-        "Unable to connect to the server. Make sure the backend is running."
+        err.response?.data?.response ||
+          err.response?.data?.message ||
+          err.message ||
+          "Unable to connect to the backend."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === "Enter" && !loading) {
       sendMessage();
     }
@@ -58,7 +60,7 @@ function App() {
         placeholder="Ask your question..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        onKeyPress={handleKeyPress}
+        onKeyDown={handleKeyDown}
         disabled={loading}
       />
 
