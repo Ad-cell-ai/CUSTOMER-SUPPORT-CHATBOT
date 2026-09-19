@@ -9,10 +9,14 @@ dotenv.config();
 const app = express();
 
 // Middleware (BEFORE routes and app.listen)
+import cors from "cors";
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "*",
+  origin: [
+    "http://localhost:5173",
+    "https://Ad-cell-ai.github.io"
+  ],
   methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"],
 }));
 
 app.use(express.json());
