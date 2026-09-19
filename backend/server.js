@@ -8,20 +8,21 @@ dotenv.config();
 
 const app = express();
 
-// Middleware (BEFORE routes and app.listen)
-import cors from "cors";
-
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://Ad-cell-ai.github.io"
-  ],
-  methods: ["GET", "POST"],
-}));
+// Middleware
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://Ad-cell-ai.github.io"
+    ],
+    methods: ["GET", "POST"],
+    credentials: false,
+  })
+);
 
 app.use(express.json());
 
-// Database connection
+// Connect to MongoDB
 connectDB();
 
 // Routes
@@ -31,6 +32,7 @@ app.get("/", (req, res) => {
   res.send("Customer Support Chatbot API is running...");
 });
 
+// Start Server
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
