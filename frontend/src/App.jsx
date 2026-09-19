@@ -3,7 +3,7 @@ import axios from "axios";
 import "./App.css";
 
 const API_URL =
-  "https://customer-support-chatbot-gf37.onrender.com/api/chat";
+   "https://customer-support-chatbot-gf37.onrender.com/api/chat";
 
 function App() {
   const [message, setMessage] = useState("");
