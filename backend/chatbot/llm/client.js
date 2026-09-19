@@ -5,3 +5,7 @@ const ai = new GoogleGenAI({
 });
 
 export default ai;
+console.log(
+  "Gemini Key:",
+  process.env.GEMINI_API_KEY?.slice(0, 10)
+);
