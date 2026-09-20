@@ -26,7 +26,11 @@ const productSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
+  keywords: {
+  type: [String],
+  default: [],
+}
 );
 
 const Product = mongoose.model(

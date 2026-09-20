@@ -1,74 +1,103 @@
-import stringSimilarity from "string-similarity";
 import Product from "../models/Product.js";
 import FAQ from "../models/FAQ.js";
 import { getChatbotReply } from "../services/chatbotServices.js";
-function isMatch(userMessage, text) {
-  const userWords = userMessage.toLowerCase().split(/\s+/);
+
+// Match score function
+function getScore(message, text = "") {
+  const msgWords = message
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+
   const textWords = text.toLowerCase().split(/\s+/);
 
-  return userWords.some((word) =>
-    textWords.some((t) => t.includes(word) || word.includes(t))
-  );
-}
-export const chatController = async (req, res) => {
-  console.log("✅ chatController reached");
-  console.log(req.body);
+  let score = 0;
 
+  for (const word of msgWords) {
+    if (textWords.includes(word)) {
+      score += 2;
+    } else if (text.toLowerCase().includes(word)) {
+      score += 1;
+    }
+  }
+
+  return score;
+}
+
+export const chatController = async (req, res) => {
   try {
     const userMessage = req.body.message.toLowerCase().trim();
 
-    // Fetch products
+    // Fetch data
     const products = await Product.find();
+    const faqs = await FAQ.find();
 
-    // Product search
-    const product = products.find((p) => {
-  return (
-    isMatch(userMessage, p.name) ||
-    isMatch(userMessage, p.description || "")
-  );
-});
+    // ==========================
+    // Product Search
+    // ==========================
 
-    if (product) {
+    let bestProduct = null;
+    let bestProductScore = 0;
+
+    for (const product of products) {
+      const score =
+        getScore(userMessage, product.name || "") +
+        getScore(userMessage, product.description || "") +
+        getScore(userMessage, (product.keywords || []).join(" "));
+
+      if (score > bestProductScore) {
+        bestProductScore = score;
+        bestProduct = product;
+      }
+    }
+
+    if (bestProductScore >= 2) {
       return res.json({
         success: true,
-        response: `The price of ${product.name} is ₹${product.price}. It is currently ${
-          product.stock > 0
-            ? `in stock (${product.stock} available).`
-            : "out of stock."
+        response: `The price of ${bestProduct.name} is ₹${bestProduct.price}. ${
+          bestProduct.stock > 0
+            ? `It is currently in stock (${bestProduct.stock} available).`
+            : "It is currently out of stock."
         }`,
       });
     }
 
-    // FAQ search
-    const faqs = await FAQ.find();
+    // ==========================
+    // FAQ Search
+    // ==========================
 
-   const faq = faqs.find((f) => {
-  const score = stringSimilarity.compareTwoStrings(
-    userMessage,
-    f.question.toLowerCase()
-  );
+    let bestFaq = null;
+    let bestFaqScore = 0;
 
-  return (
-    score > 0.4 ||
-    isMatch(userMessage, f.question || "") ||
-    isMatch(userMessage, f.category || "") ||
-    (f.keywords || []).some((k) => isMatch(userMessage, k))
-  );
-});
+    for (const faq of faqs) {
+      const score =
+        getScore(userMessage, faq.question || "") +
+        getScore(userMessage, faq.category || "") +
+        getScore(userMessage, (faq.keywords || []).join(" "));
 
-    if (faq) {
+      if (score > bestFaqScore) {
+        bestFaqScore = score;
+        bestFaq = faq;
+      }
+    }
+
+    if (bestFaqScore >= 2) {
       return res.json({
         success: true,
-        response: faq.answer,
+        response: bestFaq.answer,
       });
     }
 
-    // AI fallback
+    // ==========================
+    // AI Fallback
+    // ==========================
+
     const relevantData = {
       products: products.map((p) => ({
         name: p.name,
         price: p.price,
         stock: p.stock,
+        description: p.description,
       })),
       faqs: faqs.map((f) => ({
         question: f.question,
@@ -76,17 +105,18 @@ export const chatController = async (req, res) => {
       })),
     };
 
-    const llmResponse = await getChatbotReply(
+    const aiResponse = await getChatbotReply(
       req.body.message,
       relevantData
     );
 
     return res.json({
       success: true,
-      response: llmResponse,
+      response: aiResponse,
     });
+
   } catch (err) {
-    console.error("Chat controller error:", err);
+    console.error("Chat Controller Error:", err);
 
     return res.status(500).json({
       success: false,
