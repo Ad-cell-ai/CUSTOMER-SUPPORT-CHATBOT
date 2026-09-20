@@ -1,8 +1,10 @@
 import Product from "../models/Product.js";
 import FAQ from "../models/FAQ.js";
 import { getChatbotReply } from "../services/chatbotServices.js";
-
 export const chatController = async (req, res) => {
+  console.log("✅ chatController reached");
+  console.log(req.body);
+
   try {
     const userMessage = req.body.message.toLowerCase().trim();
 
