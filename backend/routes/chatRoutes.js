@@ -1,15 +1,9 @@
 import express from "express";
+import { chatController } from "../controllers/chatController.js";
+import { validateChat } from "../middleware/validateChat.js";
 
 const router = express.Router();
 
-router.post("/", (req, res) => {
-  console.log("✅ POST /api/chat reached");
-  console.log(req.body);
-
-  return res.json({
-    success: true,
-    response: "Backend is receiving your request!",
-  });
-});
+router.post("/", validateChat, chatController);
 
 export default router;
