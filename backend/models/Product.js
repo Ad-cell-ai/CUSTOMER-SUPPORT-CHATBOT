@@ -23,14 +23,14 @@ const productSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    keywords: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,
-  },
-  keywords: {
-  type: [String],
-  default: [],
-}
+  }
 );
 
 const Product = mongoose.model(
