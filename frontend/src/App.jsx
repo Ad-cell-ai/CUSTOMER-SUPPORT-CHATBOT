@@ -1,79 +1,126 @@
-import { useState } from "react";
-import axios from "axios";
+import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
-const API_URL =
-   "https://customer-support-chatbot-gf37.onrender.com/api/chat";
-
 function App() {
-  const [message, setMessage] = useState("");
-  const [reply, setReply] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [question, setQuestion] = useState("");
 
-  const sendMessage = async () => {
-    if (!message.trim()) {
-      setReply("Please enter a message.");
-      return;
-    }
+  const inputRef = useRef(null);
+  const bottomRef = useRef(null);
 
-    setLoading(true);
+  // Focus input when app loads
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Auto scroll to latest message
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages]);
+
+  async function sendMessage() {
+    if (!question.trim()) return;
+
+    const userQuestion = question.trim();
+
+    // Show user message immediately
+    setMessages((prev) => [
+      ...prev,
+      {
+        sender: "user",
+        text: userQuestion,
+      },
+    ]);
+
+    // Clear input
+    setQuestion("");
+
+    // Keep cursor in textbox
+    inputRef.current?.focus();
 
     try {
-      const res = await axios.post(
-        API_URL,
-        { message },
+      const res = await fetch("http://localhost:5000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userQuestion,
+        }),
+      });
+
+      const data = await res.json();
+
+      setMessages((prev) => [
+        ...prev,
         {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      setReply(res.data.response);
-      setMessage("");
+          sender: "bot",
+          text: data.response || "No response received.",
+        },
+      ]);
     } catch (err) {
-      console.error(err);
-
-      setReply(
-        err.response?.data?.response ||
-          err.response?.data?.message ||
-          err.message ||
-          "Unable to connect to the backend."
-      );
-    } finally {
-      setLoading(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "⚠️ Unable to connect to server.",
+        },
+      ]);
     }
-  };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !loading) {
-      sendMessage();
-    }
-  };
+    // Focus input again after response
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  }
 
   return (
-     <div>
-     <h1 className="title">
-  <span>🤖</span>
-  <span>Customer Support Chatbot</span>
-</h1>
+    <div className="chat-container">
+      {/* Header */}
+      <div className="header">
+        Customer Support
+      </div>
 
-      <input
-        type="text"
-        placeholder="Ask your question..."
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyDown={handleKeyDown}
-        disabled={loading}
-      />
+      {/* Chat Messages */}
+      <div className="chat-body">
+        {messages.length === 0 && (
+          <div className="welcome-message">
+            👋 Hi! Ask me anything about our products or services.
+          </div>
+        )}
 
-      <button onClick={sendMessage} disabled={loading}>
-        {loading ? "Sending..." : "Send"}
-      </button>
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={`message ${msg.sender}`}
+          >
+            {msg.text}
+          </div>
+        ))}
 
-      <div className="response">
-        <h3>Bot Response</h3>
-        <p>{reply}</p>
+        <div ref={bottomRef}></div>
+      </div>
+
+      {/* Input */}
+      <div className="input-area">
+        <input
+          ref={inputRef}
+          type="text"
+          value={question}
+          placeholder="Type your question..."
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              sendMessage();
+            }
+          }}
+        />
+
+        <button onClick={sendMessage}>
+          ➤
+        </button>
       </div>
     </div>
   );
