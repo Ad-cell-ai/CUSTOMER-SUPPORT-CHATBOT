@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
+const API_URL = " https://customer-support-chatbot-gf37.onrender.comchat";
+
 function App() {
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
@@ -8,12 +10,12 @@ function App() {
   const inputRef = useRef(null);
   const bottomRef = useRef(null);
 
-  // Focus input when app loads
+  // Focus input on load
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Auto scroll to latest message
+  // Auto-scroll to latest message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
       behavior: "smooth",
@@ -37,11 +39,11 @@ function App() {
     // Clear input
     setQuestion("");
 
-    // Keep cursor in textbox
+    // Keep cursor in input
     inputRef.current?.focus();
 
     try {
-      const res = await fetch("http://localhost:5000/api/chat", {
+      const res = await fetch(API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,6 +63,8 @@ function App() {
         },
       ]);
     } catch (err) {
+      console.error(err);
+
       setMessages((prev) => [
         ...prev,
         {
@@ -70,7 +74,7 @@ function App() {
       ]);
     }
 
-    // Focus input again after response
+    // Keep cursor in input
     setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
@@ -78,12 +82,10 @@ function App() {
 
   return (
     <div className="chat-container">
-      {/* Header */}
       <div className="header">
         Customer Support
       </div>
 
-      {/* Chat Messages */}
       <div className="chat-body">
         {messages.length === 0 && (
           <div className="welcome-message">
@@ -103,7 +105,6 @@ function App() {
         <div ref={bottomRef}></div>
       </div>
 
-      {/* Input */}
       <div className="input-area">
         <input
           ref={inputRef}
