@@ -1,6 +1,15 @@
+import stringSimilarity from "string-similarity";
 import Product from "../models/Product.js";
 import FAQ from "../models/FAQ.js";
 import { getChatbotReply } from "../services/chatbotServices.js";
+function isMatch(userMessage, text) {
+  const userWords = userMessage.toLowerCase().split(/\s+/);
+  const textWords = text.toLowerCase().split(/\s+/);
+
+  return userWords.some((word) =>
+    textWords.some((t) => t.includes(word) || word.includes(t))
+  );
+}
 export const chatController = async (req, res) => {
   console.log("✅ chatController reached");
   console.log(req.body);
@@ -12,9 +21,12 @@ export const chatController = async (req, res) => {
     const products = await Product.find();
 
     // Product search
-    const product = products.find((p) =>
-      userMessage.includes(p.name.toLowerCase())
-    );
+    const product = products.find((p) => {
+  return (
+    isMatch(userMessage, p.name) ||
+    isMatch(userMessage, p.description || "")
+  );
+});
 
     if (product) {
       return res.json({
@@ -30,16 +42,19 @@ export const chatController = async (req, res) => {
     // FAQ search
     const faqs = await FAQ.find();
 
-    const faq = faqs.find((f) => {
-      const question = (f.question || "").toLowerCase();
-      const category = (f.category || "").toLowerCase();
+   const faq = faqs.find((f) => {
+  const score = stringSimilarity.compareTwoStrings(
+    userMessage,
+    f.question.toLowerCase()
+  );
 
-      return (
-        userMessage.includes(question) ||
-        question.includes(userMessage) ||
-        (category && userMessage.includes(category))
-      );
-    });
+  return (
+    score > 0.4 ||
+    isMatch(userMessage, f.question || "") ||
+    isMatch(userMessage, f.category || "") ||
+    (f.keywords || []).some((k) => isMatch(userMessage, k))
+  );
+});
 
     if (faq) {
       return res.json({

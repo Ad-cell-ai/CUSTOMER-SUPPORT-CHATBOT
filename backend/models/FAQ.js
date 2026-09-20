@@ -13,6 +13,10 @@ const faqSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  keywords: {
+  type: [String],
+  default: [],
+},
 });
 
 const FAQ = mongoose.model("FAQ", faqSchema, "faqs");
