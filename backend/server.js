@@ -13,17 +13,15 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(
-  cors({
-    origin: [process.env.FRONTEND_URL, "http://localhost:5173"],
-    methods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-  })
-);
+app.use(cors());
 
 app.use(express.json());
 
 // Routes
+app.use((req, res, next) => {
+  console.log("Incoming:", req.method, req.url);
+  next();
+});
 app.use("/api/chat", chatRoutes);
 
 app.get("/", (req, res) => {
