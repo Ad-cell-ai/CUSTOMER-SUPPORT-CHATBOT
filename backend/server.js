@@ -3,38 +3,50 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import errorHandler from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
 const app = express();
 
+// Connect MongoDB
+connectDB();
+
 // Middleware
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://ad-cell-ai.github.io"
-    ],
+    origin: [process.env.FRONTEND_URL, "http://localhost:5173"],
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
+    credentials: true,
   })
 );
 
 app.use(express.json());
 
-// Connect Database
-connectDB();
-
 // Routes
 app.use("/api/chat", chatRoutes);
 
 app.get("/", (req, res) => {
-  res.send("Customer Support Chatbot API is running...");
+  res.json({
+    success: true,
+    message: "Customer Support Chatbot API is running 🚀",
+  });
 });
 
-// Start Server
+// 404 Route
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
+});
+
+// Global Error Handler
+
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });

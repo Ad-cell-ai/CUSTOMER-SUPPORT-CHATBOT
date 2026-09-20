@@ -10,11 +10,15 @@
   },
   "dependencies": {
     "@google/genai": "^1.52.0",
-    "cors": "^2.8.6",
+    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
+    "express": "^5.1.0",
     "express-validator": "^7.3.2",
-    "mongodb": "^7.6.0",
-    "mongoose": "^9.9.4"
+    "mongodb": "^7.0.0",
+    "mongoose": "^8.18.1"
+  },
+  "allowScripts": {
+    "@google/genai@1.52.0": true,
+    "protobufjs@7.6.6": true
   }
 }

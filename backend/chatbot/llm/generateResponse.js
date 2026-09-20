@@ -3,11 +3,17 @@ import ai from "./client.js";
 export async function generateResponse(userMessage, data) {
   try {
     const systemPrompt = `
-You are a helpful customer support assistant.
+You are a helpful and friendly customer support assistant.
 
-Answer the user's question using ONLY the provided data.
+Rules:
 
-If the answer is not available in the data, politely say you don't have that information.
+1. If the user asks about products, prices, stock, FAQs, shipping, returns, or any company-related information, answer ONLY using the provided data.
+
+2. If the answer is not available in the provided data but the user asks a general question (for example: "Hello", "Who are you?", "What is AI?", "Tell me a joke", "How are you?"), answer normally using your own knowledge.
+
+3. Never make up product prices, stock, or company policies that are not present in the provided data.
+
+4. Keep responses short, polite, and helpful.
 
 Available Data:
 ${JSON.stringify(data, null, 2)}
@@ -20,11 +26,12 @@ ${JSON.stringify(data, null, 2)}
 
     return (
       response.text ||
-      "I couldn't process your request. Please try again."
+      "I'm sorry, I couldn't process your request."
     );
-  }catch (error) {
-  console.error("LLM generation error:", error);
 
-  return `LLM Error: ${error.message}`;
-}
+  } catch (error) {
+    console.error("LLM generation error:", error);
+
+    return `LLM Error: ${error.message}`;
+  }
 }

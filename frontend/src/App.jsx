@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
-const API_URL = " https://customer-support-chatbot-gf37.onrender.comchat";
+const API_URL =
+  "https://customer-support-chatbot-gf37.onrender.com/api/chat";
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -53,7 +54,11 @@ function App() {
         }),
       });
 
-      const data = await res.json();
+      if (!res.ok) {
+  throw new Error(`HTTP Error: ${res.status}`);
+}
+
+const data = await res.json();
 
       setMessages((prev) => [
         ...prev,
@@ -63,7 +68,7 @@ function App() {
         },
       ]);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch Error:", err);
 
       setMessages((prev) => [
         ...prev,
