@@ -51,7 +51,7 @@ export const chatController = async (req, res) => {
       }
     }
 
-    if (bestProductScore >= 2) {
+    if (bestProductScore >= 4) {
       return res.json({
         success: true,
         response: `The price of ${bestProduct.name} is ₹${bestProduct.price}. ${
@@ -81,7 +81,7 @@ export const chatController = async (req, res) => {
       }
     }
 
-    if (bestFaqScore >= 2) {
+    if (bestFaqScore >= 4) {
       return res.json({
         success: true,
         response: bestFaq.answer,
