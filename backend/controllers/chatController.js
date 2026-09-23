@@ -6,18 +6,20 @@ import { getChatbotReply } from "../services/chatbotServices.js";
 function getScore(message, text = "") {
   const msgWords = message
     .toLowerCase()
-    .split(/\s+/)
-    .filter((w) => w.length > 2);
+    .split(/\W+/)
+    .filter(
+      (word) =>
+        word.length > 2 &&
+        !STOP_WORDS.includes(word)
+    );
 
-  const textWords = text.toLowerCase().split(/\s+/);
+  const target = text.toLowerCase();
 
   let score = 0;
 
   for (const word of msgWords) {
-    if (textWords.includes(word)) {
-      score += 2;
-    } else if (text.toLowerCase().includes(word)) {
-      score += 1;
+    if (target.includes(word)) {
+      score += 3;
     }
   }
 
@@ -51,7 +53,7 @@ export const chatController = async (req, res) => {
       }
     }
 
-    if (bestProductScore >= 4) {
+    if (bestProductScore >= 6) {
       return res.json({
         success: true,
         response: `The price of ${bestProduct.name} is ₹${bestProduct.price}. ${
@@ -81,7 +83,7 @@ export const chatController = async (req, res) => {
       }
     }
 
-    if (bestFaqScore >= 4) {
+    if (bestFaqScore >= 6) {
       return res.json({
         success: true,
         response: bestFaq.answer,
@@ -124,3 +126,12 @@ export const chatController = async (req, res) => {
     });
   }
 };
+if (isProductQuery) {
+  const isProductQuery =price|cost|buy|stock|available|phone|laptop|product/i.test(userMessage);
+  
+}
+   
+if (isFaqQuery) {
+   const isFaqQuery =
+  /return|refund|privacy|policy|delivery|shipping|cancel|payment|order|support|account/i.test(userMessage);
+}
