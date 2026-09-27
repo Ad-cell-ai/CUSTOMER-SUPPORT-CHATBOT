@@ -94,7 +94,7 @@ const data = await res.json();
       <div className="chat-body">
         {messages.length === 0 && (
           <div className="welcome-message">
-            👋 Hi! Ask me anything about our products or services.
+            👋 Hi! Ask me anything about our products or services and your queries.
           </div>
         )}
 
