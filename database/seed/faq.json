@@ -1,0 +1,27 @@
+[
+  {
+    "question": "What is your return policy?",
+    "answer": "Products can be returned within 7 days of delivery.",
+    "category": "Returns"
+  },
+  {
+    "question": "How long does delivery take?",
+    "answer": "Delivery usually takes 3 to 7 business days.",
+    "category": "Delivery"
+  },
+  {
+    "question": "How can I contact support?",
+    "answer": "Email us at support@company.com or call +91-9876543210.",
+    "category": "Support"
+  },
+  {
+    "question": "Do products come with a warranty?",
+    "answer": "Yes, warranty depends on the product and brand.",
+    "category": "Warranty"
+  },
+  {
+    "question": "Can I cancel my order?",
+    "answer": "Yes, before the order is shipped.",
+    "category": "Orders"
+  }
+]
