@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const API_URL = "https://customer-support-chatbot-gf37.onrender.com/api/chat";
+const REQUEST_TIMEOUT_MS = 30000;
 
 const suggestions = [
   { icon: "▦", label: "Browse available products", prompt: "Show me available products" },
@@ -15,8 +16,11 @@ function App() {
   const [question, setQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
   const inputRef = useRef(null);
   const bottomRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -26,39 +30,83 @@ function App() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, isLoading]);
 
+  // Cancel any active request when the component is removed.
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   async function sendMessage(text = question) {
     const userQuestion = text.trim();
     if (!userQuestion || isLoading) return;
+
+    const requestId = ++requestIdRef.current;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setErrorMessage("");
     setQuestion("");
     setMessages((prev) => [...prev, { sender: "user", text: userQuestion }]);
     setIsLoading(true);
 
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userQuestion }),
+        signal: controller.signal,
       });
 
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      if (!res.ok) {
+        throw new Error(`The support service returned ${res.status}.`);
+      }
 
       const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        { sender: "bot", text: data.response || "I couldn't find a response. Please try asking another way." },
-      ]);
+
+      if (requestId !== requestIdRef.current) return;
+
+      if (typeof data.response !== "string" || !data.response.trim()) {
+        throw new Error("The support service returned an unexpected response.");
+      }
+
+      setMessages((prev) => [...prev, { sender: "bot", text: data.response }]);
     } catch (error) {
+      // A newer chat/request has superseded this one; don't update that chat.
+      if (requestId !== requestIdRef.current) return;
+
       console.error("Chat request failed:", error);
-      setErrorMessage("I couldn't reach the support service. Check your connection and try again.");
+
+     const friendlyMessage =
+      error.name === "AbortError"
+      ? "The request took too long. Please try again."
+      : "Our AI service has temporarily reached its usage limit. Please try again later."; 
+
+      // Keep technical details in the console only; never show raw provider errors.
+      setErrorMessage("");
       setMessages((prev) => [
         ...prev,
-        { sender: "bot", text: "Sorry — I'm having trouble connecting right now. Please try again in a moment." },
+        {
+          sender: "bot",
+          isError: true,
+          retryPrompt: userQuestion,
+          text: friendlyMessage,
+        },
       ]);
     } finally {
-      setIsLoading(false);
-      inputRef.current?.focus();
+      clearTimeout(timeoutId);
+
+      // Don't let an older request change the loading state of a newer chat.
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false);
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
+        inputRef.current?.focus();
+      }
     }
   }
 
@@ -68,10 +116,16 @@ function App() {
   }
 
   function startNewChat() {
-    if (isLoading) return;
+    // Invalidate the pending request before aborting it so its catch/finally
+    // handlers cannot modify the new conversation.
+    requestIdRef.current += 1;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+
     setMessages([]);
     setQuestion("");
     setErrorMessage("");
+    setIsLoading(false);
     inputRef.current?.focus();
   }
 
@@ -99,10 +153,18 @@ function App() {
         <div className="sidebar-divider" />
         <div className="sidebar-section-label">QUICK TOPICS</div>
         <div className="topic-list">
-          <button type="button" className="topic-link" onClick={() => sendMessage("Show me available products")}><span>▦</span> Product information</button>
-          <button type="button" className="topic-link" onClick={() => sendMessage("How do I check a product's price?")}><span>₹</span> Pricing questions</button>
-          <button type="button" className="topic-link" onClick={() => sendMessage("How can I check stock availability?")}><span>✓</span> Stock availability</button>
-          <button type="button" className="topic-link" onClick={() => sendMessage("Tell me about frequently asked questions")}><span>?</span> FAQs & help</button>
+          <button type="button" className="topic-link" onClick={() => sendMessage("Show me available products")} disabled={isLoading}>
+            <span>▦</span> Product information
+          </button>
+          <button type="button" className="topic-link" onClick={() => sendMessage("How do I check a product's price?")} disabled={isLoading}>
+            <span>₹</span> Pricing questions
+          </button>
+          <button type="button" className="topic-link" onClick={() => sendMessage("How can I check stock availability?")} disabled={isLoading}>
+            <span>✓</span> Stock availability
+          </button>
+          <button type="button" className="topic-link" onClick={() => sendMessage("Tell me about frequently asked questions")} disabled={isLoading}>
+            <span>?</span> FAQs & help
+          </button>
         </div>
 
         <div className="sidebar-bottom-card">
@@ -126,7 +188,7 @@ function App() {
           </div>
           <div className="topbar-actions">
             <div className="secure-note"><span className="sparkle">✧</span> AI-powered assistance</div>
-            <button className="new-chat-button" type="button" onClick={startNewChat} disabled={isLoading}>
+            <button className="new-chat-button" type="button" onClick={startNewChat}>
               <span>＋</span> New chat
             </button>
           </div>
@@ -139,10 +201,15 @@ function App() {
               <div className="welcome-avatar"><span className="bot-antenna" /><span className="bot-eyes">••</span><span className="bot-smile" /></div>
               <h1>Hi there. How can we <span>help you today?</span></h1>
               <p className="welcome-description">Get quick answers about products, prices, availability, and more.</p>
-
               <div className="suggestion-grid">
                 {suggestions.map((item) => (
-                  <button className="suggestion-card" key={item.label} type="button" onClick={() => sendMessage(item.prompt)} disabled={isLoading}>
+                  <button
+                    className="suggestion-card"
+                    key={item.label}
+                    type="button"
+                    onClick={() => sendMessage(item.prompt)}
+                    disabled={isLoading}
+                  >
                     <span className="suggestion-icon">{item.icon}</span>
                     <span className="suggestion-label">{item.label}</span>
                     <span className="suggestion-arrow">↗</span>
@@ -159,7 +226,19 @@ function App() {
                   {msg.sender === "bot" && <div className="message-avatar" aria-hidden="true"><span>✦</span></div>}
                   <div className="message-content">
                     <div className="message-sender">{msg.sender === "user" ? "You" : "SupportBot"}</div>
-                    <div className="message-bubble">{msg.text}</div>
+                    <div className={`message-bubble${msg.isError ? " message-bubble-error" : ""}`}>
+                      <div>{msg.text}</div>
+                      {msg.isError && (
+                        <button
+                          className="retry-button"
+                          type="button"
+                          onClick={() => sendMessage(msg.retryPrompt)}
+                          disabled={isLoading}
+                        >
+                          <span aria-hidden="true">↻</span> Retry
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {msg.sender === "user" && <div className="user-avatar" aria-hidden="true">Y</div>}
                 </div>

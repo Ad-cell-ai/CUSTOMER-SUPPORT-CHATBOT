@@ -27,3 +27,35 @@ body {
 button, input {
   font: inherit;
 }
+
+.message-bubble-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.retry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.retry-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.retry-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
