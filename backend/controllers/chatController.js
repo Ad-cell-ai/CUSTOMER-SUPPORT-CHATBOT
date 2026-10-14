@@ -153,6 +153,31 @@ export const chatController = async (req, res) => {
       });
     }
 
+    
+    const query = normalize(originalMessage);
+
+    const exactProduct = products.find((product) =>
+      normalize(product.name).includes(query) ||
+      query.includes(normalize(product.name))
+    );
+
+    if (
+      exactProduct &&
+      /\b(price|cost|much|buy|purchase)\b/i.test(originalMessage)
+    ) {
+      const price =
+        exactProduct.price * (1 - (exactProduct.discount || 0) / 100);
+
+      return res.json({
+        success: true,
+        response: `${exactProduct.name} costs ₹${price.toFixed(2)}. ${
+          exactProduct.stock > 0
+            ? `It is in stock (${exactProduct.stock} available).`
+            : "It is currently out of stock."
+        }`
+      });
+}
+
 
     // 2. Search products.
     let bestProduct = null;
