@@ -17,7 +17,7 @@ ${JSON.stringify(data, null, 2)}
   for (let i = 0; i < 3; i++) {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.8-Flash-docs",
         contents: `${systemPrompt}\n\nUser: ${userMessage}`,
       });
 
