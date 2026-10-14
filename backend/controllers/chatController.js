@@ -84,6 +84,11 @@ export const chatController = async (req, res) => {
     }
 
     const userMessage = normalize(originalMessage);
+    const history = Array.isArray(req.body?.history)
+      ? req.body.history
+          .filter((item) => item && (item.sender === "user" || item.sender === "bot") && typeof item.text === "string")
+          .slice(-10)
+      : [];
 
     if (GREETINGS.includes(userMessage)) {
       return res.json({
@@ -98,6 +103,76 @@ export const chatController = async (req, res) => {
         .lean(),
       FAQ.find().select("question answer category keywords").lean()
     ]);
+
+    // Identify the product mentioned in the recent conversation for contextual follow-ups.
+    const followUpText = normalize(originalMessage);
+    const isSpecsFollowUp = /\b(specification|specifications|specs|features|details|description)\b/.test(followUpText);
+    const isDiscountFollowUp = /\b(discount|discounts|offer|offers|deal|deals)\b/.test(followUpText);
+    const isSimilarFollowUp = /\b(similar|related|alternatives|alternative)\b/.test(followUpText);
+    const isProductFollowUp = isSpecsFollowUp || isDiscountFollowUp || isSimilarFollowUp;
+    let contextProduct = null;
+
+
+      if (isProductFollowUp && history.length) {
+        const recentMessages = [...history].reverse();
+
+        for (const pastMessage of recentMessages) {
+          const pastNormalized = normalize(pastMessage.text);
+
+          contextProduct = products.find((product) => {
+            const productName = normalize(product.name);
+            const sku = normalize(product.sku || "");
+
+            // Match the complete product name or SKU in the conversation.
+            if (sku && pastNormalized.includes(sku)) return true;
+            if (productName && pastNormalized.includes(productName)) return true;
+
+            return false;
+          });
+
+          if (contextProduct) break;
+        }
+  }
+
+    if (contextProduct && isSpecsFollowUp) {
+      return res.json({
+        success: true,
+        response: `${contextProduct.name} specifications:
+` +
+          `Brand: ${contextProduct.brand || "Generic"}
+` +
+          `Category: ${contextProduct.category || "Not specified"}
+` +
+          `Description: ${contextProduct.description || "No further specifications are listed in the catalog."}
+` +
+          `Rating: ${contextProduct.rating ?? "Not rated"}/5
+` +
+          `Availability: ${contextProduct.stock > 0 ? `In stock (${contextProduct.stock} available)` : "Out of stock"}`
+      });
+    }
+
+    if (contextProduct && isDiscountFollowUp) {
+      const discount = Number(contextProduct.discount || 0);
+      const finalPrice = contextProduct.price * (1 - discount / 100);
+      return res.json({
+        success: true,
+        response: discount > 0
+          ? `${contextProduct.name} currently has a ${discount}% discount. The price after discount is ₹${finalPrice.toFixed(2)} (original price ₹${Number(contextProduct.price).toFixed(2)}).`
+          : `${contextProduct.name} has no discount listed right now. Its current price is ₹${Number(contextProduct.price).toFixed(2)}.`
+      });
+    }
+
+    if (contextProduct && isSimilarFollowUp) {
+      const similarProducts = products
+        .filter((product) => product._id.toString() !== contextProduct._id.toString() && product.stock > 0 && product.category === contextProduct.category)
+        .slice(0, 5);
+      return res.json({
+        success: true,
+        response: similarProducts.length
+          ? `Products similar to ${contextProduct.name}:\n` + similarProducts.map((product) => `${product.name} — ₹${(product.price * (1 - (product.discount || 0) / 100)).toFixed(2)}`).join("\n")
+          : `I couldn't find other in-stock products in the same category as ${contextProduct.name}.`
+      });
+    }
 
     // 1. Search FAQs first.
     let bestFaq = null;

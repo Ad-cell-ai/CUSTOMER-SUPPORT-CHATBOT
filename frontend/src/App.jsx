@@ -11,6 +11,60 @@ const suggestions = [
   { icon: "?", label: "Common questions", prompt: "What are the most common customer support questions?" },
 ];
 
+// Rule-based follow-ups keep suggestions fast and do not make extra AI requests.
+function getFollowUpSuggestions(userMessage, response, isError) {
+  if (isError) return [];
+
+  const question = (userMessage || "").toLowerCase();
+  const answer = (response || "").toLowerCase();
+  const hasProduct = /product|price|cost|stock|available|discount|specification|nova|pulse|phone|laptop/.test(question + " " + answer);
+  const asksListing = /show|list|browse|available products|all products|products available/.test(question);
+  const asksFaq = /faq|frequently asked|common questions/.test(question);
+  const asksPrice = /price|cost|how much|₹|rs\.?/.test(question);
+  const greeting = /^(hi|hello|hey|good morning|good afternoon|good evening)[!.\s]*$/.test(question.trim());
+
+  if (asksListing || (/products/.test(answer) && /₹|price|stock/.test(answer))) {
+    return [
+      { label: "Find a specific product", prompt: "Help me find a specific product" },
+      { label: "Check a product's price", prompt: "How do I check a product's price?" },
+      { label: "Check stock availability", prompt: "How can I check if a product is in stock?" },
+    ];
+  }
+  if (asksFaq) {
+    return [
+      { label: "Show more FAQs", prompt: "Tell me about frequently asked questions" },
+      { label: "Product information", prompt: "Show me available products" },
+      { label: "Contact support help", prompt: "What can you help me with?" },
+    ];
+  }
+  if (asksPrice || /₹\s?\d|price|cost/.test(answer)) {
+    return [
+      { label: "View specifications", prompt: "Tell me the specifications of that product" },
+      { label: "Any discounts?", prompt: "Is there a discount on that product?" },
+      { label: "Similar products", prompt: "Show me similar products" },
+    ];
+  }
+  if (hasProduct) {
+    return [
+      { label: "View specifications", prompt: "Tell me the specifications of that product" },
+      { label: "Check its price", prompt: "What is the price of that product?" },
+      { label: "Similar products", prompt: "Show me similar products" },
+    ];
+  }
+  if (greeting || /how can i help|what can i help/.test(answer)) {
+    return [
+      { label: "Browse products", prompt: "Show me available products" },
+      { label: "Ask about pricing", prompt: "How do I check a product's price?" },
+      { label: "Common questions", prompt: "Tell me about frequently asked questions" },
+    ];
+  }
+  return [
+    { label: "Explain in more detail", prompt: "Can you explain that in more detail?" },
+    { label: "Give me an example", prompt: "Can you give me an example?" },
+    { label: "Related questions", prompt: "What else should I know about this?" },
+  ];
+}
+
 function App() {
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
@@ -57,7 +111,12 @@ function App() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userQuestion }),
+        body: JSON.stringify({
+          message: userQuestion,
+          history: [...messages, { sender: "user", text: userQuestion }]
+          .slice(-10)
+          .map(({ sender, text }) => ({ sender, text })),
+        }),
         signal: controller.signal,
       });
 
@@ -239,6 +298,29 @@ function App() {
                         </button>
                       )}
                     </div>
+                    {msg.sender === "bot" && !msg.isError && (() => {
+                      const previousUserMessage = messages[index - 1];
+                      const followUps = getFollowUpSuggestions(
+                        previousUserMessage?.sender === "user" ? previousUserMessage.text : "",
+                        msg.text,
+                        msg.isError
+                      );
+                      return followUps.length > 0 ? (
+                        <div className="follow-up-suggestions" aria-label="Suggested follow-up questions">
+                          {followUps.map((item) => (
+                            <button
+                              className="follow-up-chip"
+                              key={item.label}
+                              type="button"
+                              onClick={() => sendMessage(item.prompt)}
+                              disabled={isLoading}
+                            >
+                              {item.label} <span aria-hidden="true">↗</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   {msg.sender === "user" && <div className="user-avatar" aria-hidden="true">Y</div>}
                 </div>
