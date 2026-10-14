@@ -154,12 +154,19 @@ export const chatController = async (req, res) => {
     }
 
     
-    const query = normalize(originalMessage);
+    
+    const queryWords = normalize(originalMessage)
+      .split(/\s+/)
+      .filter((word) => word.length > 1 && !STOP_WORDS.has(word));
 
-    const exactProduct = products.find((product) =>
-      normalize(product.name).includes(query) ||
-      query.includes(normalize(product.name))
-    );
+    const exactProduct = products.find((product) => {
+      const productWords = normalize(product.name).split(/\s+/);
+
+      return queryWords.some((word) =>
+        productWords.includes(word)
+      ) &&
+      productWords.some((word) => queryWords.includes(word));
+    });
 
     if (
       exactProduct &&
@@ -176,7 +183,8 @@ export const chatController = async (req, res) => {
             : "It is currently out of stock."
         }`
       });
-}
+  }
+
 
 
     // 2. Search products.
