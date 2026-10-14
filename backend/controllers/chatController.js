@@ -23,7 +23,7 @@ const SUPPORT_TERMS = [
   "discount", "brand", "category", "cancel", "support",
   "help", "account", "invoice", "damaged", "broken",
   "laptop", "phone", "mobile", "headphone", "charger",
-  "ram", "storage", "memory", "difference", "explain", "technology"
+  "ram", "storage", "memory", "difference", "explain", "technology", "tell"
 ];
 
 function normalize(text = "") {
@@ -225,14 +225,24 @@ export const chatController = async (req, res) => {
     }
 
     // 3. Don't use AI for obviously unrelated questions.
+    const looksLikeProductCode = /\b[A-Z]{2,}\d{3,}\b/i.test(originalMessage);
+
+    if (looksLikeProductCode && !exactProduct) {
+      return res.json({
+        success: true,
+        response: "Sorry, I couldn't find a product with that code. Please check the SKU and try again."
+      });
+    }
+
+    // 4. Don't use AI for unrelated questions.
     if (!isSupportRelated(originalMessage)) {
       return res.json({
         success: true,
         response: "I'm here to help with products and customer-support questions. Please ask me about our products, prices, availability, orders, or support policies."
       });
-    }
+  }
 
-    // 4. Use Gemini only for relevant questions not answered by the database.
+    // 5. Use Gemini only for relevant questions not answered by the database.
     const aiResponse = await getChatbotReply(originalMessage, {
       faqs: [],
       products: []
