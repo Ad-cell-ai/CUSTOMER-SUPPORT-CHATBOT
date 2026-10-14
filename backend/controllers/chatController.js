@@ -22,7 +22,8 @@ const SUPPORT_TERMS = [
   "return", "refund", "exchange", "warranty", "payment",
   "discount", "brand", "category", "cancel", "support",
   "help", "account", "invoice", "damaged", "broken",
-  "laptop", "phone", "mobile", "headphone", "charger"
+  "laptop", "phone", "mobile", "headphone", "charger",
+  "ram", "storage", "memory", "difference", "explain", "technology"
 ];
 
 function normalize(text = "") {
