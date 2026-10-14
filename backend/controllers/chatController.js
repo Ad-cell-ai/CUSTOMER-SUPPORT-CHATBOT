@@ -2,31 +2,12 @@ import Product from "../models/Product.js";
 import FAQ from "../models/FAQ.js";
 import { getChatbotReply } from "../services/chatbotServices.js";
 
-// Ignore common words
-const STOP_WORDS = [
-  "what",
-  "is",
-  "are",
-  "the",
-  "a",
-  "an",
-  "of",
-  "for",
-  "to",
-  "do",
-  "does",
-  "can",
-  "i",
-  "my",
-  "your",
-  "how",
-  "when",
-  "where",
-  "tell",
-  "me",
-  "please",
-  "about"
-];
+const STOP_WORDS = new Set([
+  "what", "is", "are", "the", "a", "an", "of", "for", "to", "do",
+  "does", "can", "i", "my", "your", "how", "when", "where", "tell",
+  "me", "please", "about", "in", "on", "and", "or", "with", "you",
+  "we", "our", "it", "this", "that", "be", "does", "would", "could"
+]);
 
 // Greeting words
 const GREETINGS = [
@@ -38,28 +19,23 @@ const GREETINGS = [
   "good evening"
 ];
 
-// Match score function
-function getScore(message, text = "") {
-  const msgWords = message
-    .toLowerCase()
-    .split(/\W+/)
-    .filter(
-      (word) =>
-        word.length > 2 &&
-        !STOP_WORDS.includes(word)
+function getMatchScore(message, text = "") {
+  const words = (value) =>
+    new Set(
+      value
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .split(/\s+/)
+        .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
     );
 
-  const target = text.toLowerCase();
+  const queryWords = words(message);
+  const targetWords = words(text);
 
-  let score = 0;
+  if (!queryWords.size || !targetWords.size) return 0;
 
-  for (const word of msgWords) {
-    if (target.includes(word)) {
-      score += 3;
-    }
-  }
-
-  return score;
+  const overlap = [...queryWords].filter((word) => targetWords.has(word)).length;
+  return overlap / Math.sqrt(queryWords.size * targetWords.size);
 }
 
 export const chatController = async (req, res) => {
@@ -79,81 +55,55 @@ export const chatController = async (req, res) => {
     const products = await Product.find();
     const faqs = await FAQ.find();
 
-    // Intent Detection
-    const isProductQuery =
-      /price|cost|buy|stock|available|phone|laptop|mobile|product|iphone|samsung|pixel|oneplus/i.test(
-        userMessage
-      );
+    // Search FAQ records directly, without requiring a hard-coded intent word.
+    let bestFaq = null;
+    let bestFaqScore = 0;
 
-    const isFaqQuery =
-      /return|refund|privacy|policy|delivery|shipping|cancel|payment|support|account|warranty|exchange|track|order/i.test(
-        userMessage
-      );
+    for (const faq of faqs) {
+      const searchableText = [
+        faq.question || "",
+        faq.category || "",
+        ...(faq.keywords || [])
+      ].join(" ");
+      const score = getMatchScore(userMessage, searchableText);
 
-    // ------------------------
-    // PRODUCT SEARCH
-    // ------------------------
-
-    if (isProductQuery) {
-      let bestProduct = null;
-      let bestScore = 0;
-
-      for (const product of products) {
-        const score =
-          getScore(userMessage, product.name || "") +
-          getScore(userMessage, product.description || "") +
-          getScore(
-            userMessage,
-            (product.keywords || []).join(" ")
-          );
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestProduct = product;
-        }
-      }
-
-      if (bestProduct && bestScore >= 3) {
-        return res.json({
-          success: true,
-          response: `The price of ${bestProduct.name} is ₹${bestProduct.price}. ${
-            bestProduct.stock > 0
-              ? `It is currently in stock (${bestProduct.stock} available).`
-              : "It is currently out of stock."
-          }`
-        });
+      if (score > bestFaqScore) {
+        bestFaqScore = score;
+        bestFaq = faq;
       }
     }
 
-    // ------------------------
-    // FAQ SEARCH
-    // ------------------------
+    if (bestFaq && bestFaqScore >= 0.45) {
+      return res.json({ success: true, response: bestFaq.answer });
+    }
 
-    if (isFaqQuery) {
-      let bestFaq = null;
-      let bestScore = 0;
+    // Search product records when the question identifies a product.
+    let bestProduct = null;
+    let bestProductScore = 0;
 
-      for (const faq of faqs) {
-        const score =
-          getScore(userMessage, faq.question || "") +
-          getScore(userMessage, faq.category || "") +
-          getScore(
-            userMessage,
-            (faq.keywords || []).join(" ")
-          );
+    for (const product of products) {
+      const searchableText = [
+        product.name || "",
+        product.description || "",
+        ...(product.keywords || [])
+      ].join(" ");
+      const score = getMatchScore(userMessage, searchableText);
 
-        if (score > bestScore) {
-          bestScore = score;
-          bestFaq = faq;
-        }
+      if (score > bestProductScore) {
+        bestProductScore = score;
+        bestProduct = product;
       }
+    }
 
-      if (bestFaq && bestScore >= 3) {
-        return res.json({
-          success: true,
-          response: bestFaq.answer
-        });
-      }
+    if (bestProduct && bestProductScore >= 0.45) {
+      return res.json({
+        success: true,
+        response: `The price of ${bestProduct.name} is ₹${bestProduct.price}. ${
+          bestProduct.stock > 0
+            ? `It is currently in stock (${bestProduct.stock} available).`
+            : "It is currently out of stock."
+        }`
+      });
     }
 
     // ------------------------
