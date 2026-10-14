@@ -1,30 +1,38 @@
+
 import Product from "../models/Product.js";
 import FAQ from "../models/FAQ.js";
 import { getChatbotReply } from "../services/chatbotServices.js";
 
 const STOP_WORDS = new Set([
-  "what", "is", "are", "the", "a", "an", "of", "for", "to", "do",
-  "does", "can", "i", "my", "your", "how", "when", "where", "tell",
-  "me", "please", "about", "in", "on", "and", "or", "with", "you",
-  "we", "our", "it", "this", "that", "be", "does", "would", "could"
+  "what", "is", "are", "the", "a", "an", "of", "for", "to",
+  "do", "does", "can", "i", "my", "your", "how", "when",
+  "where", "tell", "me", "please", "about", "in", "on",
+  "and", "or", "with", "you", "we", "our", "it", "this",
+  "that", "be", "would", "could", "show", "find", "get"
 ]);
 
-// Greeting words
 const GREETINGS = [
-  "hi",
-  "hello",
-  "hey",
-  "good morning",
-  "good afternoon",
-  "good evening"
+  "hi", "hello", "hey", "good morning",
+  "good afternoon", "good evening"
 ];
+
+const SUPPORT_TERMS = [
+  "product", "price", "cost", "stock", "available",
+  "buy", "purchase", "order", "delivery", "shipping",
+  "return", "refund", "exchange", "warranty", "payment",
+  "discount", "brand", "category", "cancel", "support",
+  "help", "account", "invoice", "damaged", "broken",
+  "laptop", "phone", "mobile", "headphone", "charger"
+];
+
+function normalize(text = "") {
+  return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
 
 function getMatchScore(message, text = "") {
   const words = (value) =>
     new Set(
-      value
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
+      normalize(value)
         .split(/\s+/)
         .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
     );
@@ -38,24 +46,41 @@ function getMatchScore(message, text = "") {
   return overlap / Math.sqrt(queryWords.size * targetWords.size);
 }
 
+function isSupportRelated(message) {
+  const normalized = normalize(message);
+  return SUPPORT_TERMS.some((term) =>
+    normalized.split(" ").includes(term)
+  );
+}
+
 export const chatController = async (req, res) => {
   try {
-    const userMessage = req.body.message.toLowerCase().trim();
+    const originalMessage = req.body?.message;
 
-    // Greeting
-    if (GREETINGS.includes(userMessage)) {
-      return res.json({
-        success: true,
-        response:
-          "Hello! 👋 Welcome to Customer Support. How can I help you today?"
+    if (typeof originalMessage !== "string" || !originalMessage.trim()) {
+      return res.status(400).json({
+        success: false,
+        response: "Please enter a question so I can help you."
       });
     }
 
-    // Fetch data
-    const products = await Product.find();
-    const faqs = await FAQ.find();
+    const userMessage = normalize(originalMessage);
 
-    // Search FAQ records directly, without requiring a hard-coded intent word.
+    if (GREETINGS.includes(userMessage)) {
+      return res.json({
+        success: true,
+        response: "Hello! 👋 Welcome to Customer Support. How can I help you today?"
+      });
+    }
+
+    const [products, faqs] = await Promise.all([
+      Product.find({ isActive: true })
+        .select("sku name category brand price discount rating stock description keywords")
+        .lean(),
+      FAQ.find().select("question answer category keywords").lean()
+    ]);
+
+    // 1. Search FAQs first.
     let bestFaq = null;
     let bestFaqScore = 0;
 
@@ -65,7 +90,8 @@ export const chatController = async (req, res) => {
         faq.category || "",
         ...(faq.keywords || [])
       ].join(" ");
-      const score = getMatchScore(userMessage, searchableText);
+
+      const score = getMatchScore(originalMessage, searchableText);
 
       if (score > bestFaqScore) {
         bestFaqScore = score;
@@ -74,20 +100,27 @@ export const chatController = async (req, res) => {
     }
 
     if (bestFaq && bestFaqScore >= 0.45) {
-      return res.json({ success: true, response: bestFaq.answer });
+      return res.json({
+        success: true,
+        response: bestFaq.answer
+      });
     }
 
-    // Search product records when the question identifies a product.
+    // 2. Search products.
     let bestProduct = null;
     let bestProductScore = 0;
 
     for (const product of products) {
       const searchableText = [
+        product.sku || "",
         product.name || "",
+        product.category || "",
+        product.brand || "",
         product.description || "",
         ...(product.keywords || [])
       ].join(" ");
-      const score = getMatchScore(userMessage, searchableText);
+
+      const score = getMatchScore(originalMessage, searchableText);
 
       if (score > bestProductScore) {
         bestProductScore = score;
@@ -96,37 +129,33 @@ export const chatController = async (req, res) => {
     }
 
     if (bestProduct && bestProductScore >= 0.45) {
+      const discountedPrice =
+        bestProduct.price * (1 - (bestProduct.discount || 0) / 100);
+
       return res.json({
         success: true,
-        response: `The price of ${bestProduct.name} is ₹${bestProduct.price}. ${
-          bestProduct.stock > 0
-            ? `It is currently in stock (${bestProduct.stock} available).`
-            : "It is currently out of stock."
-        }`
+        response:
+          `${bestProduct.name} (${bestProduct.brand || "Generic"}) costs ₹${discountedPrice.toFixed(2)} ` +
+          `and is ${bestProduct.stock > 0
+            ? `in stock (${bestProduct.stock} available)`
+            : "currently out of stock"}.` +
+          `${bestProduct.discount > 0 ? ` The listed discount is ${bestProduct.discount}%.` : ""}`
       });
     }
 
-    // ------------------------
-    // GEMINI FALLBACK
-    // ------------------------
+    // 3. Don't use AI for obviously unrelated questions.
+    if (!isSupportRelated(originalMessage)) {
+      return res.json({
+        success: true,
+        response: "I'm here to help with products and customer-support questions. Please ask me about our products, prices, availability, orders, or support policies."
+      });
+    }
 
-    const relevantData = {
-      products: products.map((p) => ({
-        name: p.name,
-        price: p.price,
-        stock: p.stock,
-        description: p.description
-      })),
-      faqs: faqs.map((f) => ({
-        question: f.question,
-        answer: f.answer
-      }))
-    };
-
-    const aiResponse = await getChatbotReply(
-      req.body.message,
-      relevantData
-    );
+    // 4. Use Gemini only for relevant questions not answered by the database.
+    const aiResponse = await getChatbotReply(originalMessage, {
+      faqs: [],
+      products: []
+    });
 
     return res.json({
       success: true,
@@ -138,7 +167,7 @@ export const chatController = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error"
+      response: "Sorry, I'm having trouble right now. Please try again shortly."
     });
   }
 };
