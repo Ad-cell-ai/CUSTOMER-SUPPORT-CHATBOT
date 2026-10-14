@@ -118,6 +118,24 @@ export const chatController = async (req, res) => {
       }
     }
 
+    if (normalize(originalMessage).includes("frequently asked questions")) {
+      if (faqs.length === 0) {
+        return res.json({
+          success: true,
+          response: "No FAQs are available right now."
+        });
+      }
+
+      const faqList = faqs
+        .map((faq, index) => `${index + 1}. ${faq.question}\n${faq.answer}`)
+        .join("\n\n");
+
+      return res.json({
+        success: true,
+        response: `Here are our frequently asked questions:\n\n${faqList}`
+      });
+    }
+
     if (bestFaq && bestFaqScore >= 0.45) {
       return res.json({
         success: true,
