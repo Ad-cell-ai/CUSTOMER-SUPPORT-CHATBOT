@@ -54,6 +54,24 @@ function isSupportRelated(message) {
   );
 }
 
+function isProductListingQuestion(message) {
+  const normalized = normalize(message);
+
+  const listingTerms = [
+    "products",
+    "all products",
+    "available products",
+    "show products",
+    "list products",
+    "what do you sell"
+  ];
+
+  return listingTerms.some((term) =>
+    normalized.includes(term)
+  );
+}
+
+
 export const chatController = async (req, res) => {
   try {
     const originalMessage = req.body?.message;
@@ -106,6 +124,35 @@ export const chatController = async (req, res) => {
         response: bestFaq.answer
       });
     }
+
+    if (isProductListingQuestion(originalMessage)) {
+      const availableProducts = products.filter(
+        (product) => product.stock > 0
+      );
+
+      if (availableProducts.length === 0) {
+        return res.json({
+          success: true,
+          response: "No products are currently in stock."
+        });
+      }
+
+      const productList = availableProducts
+        .slice(0, 10)
+        .map((product) =>
+          `${product.name} - ₹${(
+            product.price *
+            (1 - (product.discount || 0) / 100)
+          ).toFixed(2)}`
+        )
+        .join("\n");
+
+      return res.json({
+        success: true,
+        response: `Here are some available products:\n${productList}`
+      });
+    }
+
 
     // 2. Search products.
     let bestProduct = null;
