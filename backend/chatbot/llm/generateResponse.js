@@ -30,9 +30,15 @@ ${JSON.stringify(data, null, 2)}
     } catch (error) {
       console.error("LLM generation error:", error);
 
-      if (error.status === 429) {
-        return "⚠️ The AI request limit has been reached for now. Please try again later.";
+      
+      if (
+        error.status === 429 ||
+        error.message?.includes("quota") ||
+        error.message?.includes("rate limit")
+      ) {
+        return "⚠️ AI token limit reached. Please try again later.";
       }
+
 
       // Retry only if Gemini is temporarily overloaded
       if (error.status === 503 && i < 2) {
@@ -41,7 +47,7 @@ ${JSON.stringify(data, null, 2)}
         continue;
       }
 
-      return `⚠️ AI service is temporarily unavailable. Please try again in a few moments.\n\nError: ${error.message}`;
+      return "⚠️ AI service is temporarily unavailable. Please try again later.";
     }
   }
 }
