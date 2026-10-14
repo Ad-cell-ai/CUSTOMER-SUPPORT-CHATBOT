@@ -1,5 +1,7 @@
 import ai from "./client.js";
 
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+
 export async function generateResponse(userMessage, data) {
   const systemPrompt = `
 You are a helpful AI customer support assistant.
@@ -17,7 +19,7 @@ ${JSON.stringify(data, null, 2)}
   for (let i = 0; i < 3; i++) {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-Flash-docs",
+        model: MODEL,
         contents: `${systemPrompt}\n\nUser: ${userMessage}`,
       });
 
@@ -27,6 +29,10 @@ ${JSON.stringify(data, null, 2)}
       );
     } catch (error) {
       console.error("LLM generation error:", error);
+
+      if (error.status === 429) {
+        return "⚠️ The AI request limit has been reached for now. Please try again later.";
+      }
 
       // Retry only if Gemini is temporarily overloaded
       if (error.status === 503 && i < 2) {
