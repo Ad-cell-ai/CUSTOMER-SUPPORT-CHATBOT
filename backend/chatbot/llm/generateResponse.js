@@ -29,6 +29,9 @@ ${JSON.stringify(data, null, 2)}
       );
     } catch (error) {
       console.error("LLM generation error:", error);
+      console.error("Status:", error.status);
+      console.error("Message:", error.message);
+      console.error("Details:", JSON.stringify(error));
 
       
       if (
