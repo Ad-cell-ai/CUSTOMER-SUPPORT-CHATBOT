@@ -16,8 +16,12 @@ const STOP_WORDS = new Set([
 ]);
 
 const GREETINGS = [
-  "hi", "hello", "hey", "good morning",
-  "good afternoon", "good evening"
+  "hi",
+  "hello",
+  "hey",
+  "good morning",
+  "good afternoon",
+  "good evening"
 ];
 
 const SUPPORT_TERMS = [
@@ -42,7 +46,7 @@ function findBestProduct(message, products) {
 
   if (!query) return null;
 
-  // First check exact product names and SKUs.
+  // Check exact product names and SKUs first.
   const exactMatch = products.find((product) => {
     const name = normalize(product.name || "");
     const sku = normalize(product.sku || "");
@@ -52,7 +56,7 @@ function findBestProduct(message, products) {
 
   if (exactMatch) return exactMatch;
 
-  // Check whether a complete product name or SKU appears in the question.
+  // Check for a complete product name or SKU in the question.
   const containedMatch = products.find((product) => {
     const name = normalize(product.name || "");
     const sku = normalize(product.sku || "");
@@ -65,6 +69,7 @@ function findBestProduct(message, products) {
 
   if (containedMatch) return containedMatch;
 
+  // Match meaningful words in product names and metadata.
   const queryWords = query
     .split(/\s+/)
     .filter((word) => word && !STOP_WORDS.has(word));
@@ -140,11 +145,14 @@ function isProductListingQuestion(message) {
 
   return [
     "products",
-    "all products",
-    "available products",
-    "show products",
-    "list products",
-    "what do you sell"
+    "product",
+    "available product",
+    "show product",
+    "list product",
+    "all product",
+    "what do you sell",
+    "browse product",
+    "display product"
   ].some((term) => normalized.includes(term));
 }
 
@@ -206,8 +214,8 @@ export const chatController = async (req, res) => {
         .lean()
     ]);
 
-    // Find the product mentioned earlier in the conversation.
-    const followUpText = normalize(originalMessage);
+    // Detect product follow-up questions.
+    const followUpText = userMessage;
 
     const isSpecsFollowUp =
       /\b(specification|specifications|specs|features|details|description)\b/
@@ -268,7 +276,7 @@ export const chatController = async (req, res) => {
           `Description: ${contextProduct.description || "No further specifications are listed in the catalog."}\n` +
           `Rating: ${contextProduct.rating ?? "Not rated"}/5\n` +
           `Availability: ${
-            contextProduct.stock > 0
+            Number(contextProduct.stock) > 0
               ? `In stock (${contextProduct.stock} available)`
               : "Out of stock"
           }`
@@ -293,7 +301,7 @@ export const chatController = async (req, res) => {
         .filter(
           (product) =>
             String(product._id) !== String(contextProduct._id) &&
-            product.stock > 0 &&
+            Number(product.stock) > 0 &&
             product.category === contextProduct.category
         )
         .slice(0, 5);
@@ -315,7 +323,7 @@ export const chatController = async (req, res) => {
       });
     }
 
-    // Search FAQs.
+    // Find the best matching FAQ.
     let bestFaq = null;
     let bestFaqScore = 0;
 
@@ -334,7 +342,12 @@ export const chatController = async (req, res) => {
       }
     }
 
-    if (userMessage.includes("frequently asked questions")) {
+    // Handle requests for the FAQ list.
+    if (
+      userMessage.includes("frequently asked questions") ||
+      userMessage === "faqs" ||
+      userMessage === "faq"
+    ) {
       if (faqs.length === 0) {
         return res.json({
           success: true,
@@ -354,13 +367,7 @@ export const chatController = async (req, res) => {
       });
     }
 
-    if (bestFaq && bestFaqScore >= 0.45) {
-      return res.json({
-        success: true,
-        response: bestFaq.answer
-      });
-    }
-
+    // IMPORTANT: Handle product listing BEFORE individual FAQ matching.
     if (isProductListingQuestion(originalMessage)) {
       const availableProducts = products.filter(
         (product) => Number(product.stock) > 0
@@ -390,7 +397,15 @@ export const chatController = async (req, res) => {
       });
     }
 
-    // Match product questions against the database.
+    // Only check an individual FAQ after product listing.
+    if (bestFaq && bestFaqScore >= 0.45) {
+      return res.json({
+        success: true,
+        response: bestFaq.answer
+      });
+    }
+
+    // Match individual product questions.
     const matchedProduct = findBestProduct(originalMessage, products);
 
     if (matchedProduct) {
@@ -400,6 +415,7 @@ export const chatController = async (req, res) => {
       });
     }
 
+    // Identify unknown product codes.
     const looksLikeProductCode = /\b[A-Z]{2,}\d{3,}\b/i.test(
       originalMessage
     );
@@ -412,6 +428,7 @@ export const chatController = async (req, res) => {
       });
     }
 
+    // Redirect unrelated questions to customer support.
     if (!isSupportRelated(originalMessage)) {
       return res.json({
         success: true,
