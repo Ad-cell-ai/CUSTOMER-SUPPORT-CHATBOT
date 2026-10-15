@@ -28,7 +28,7 @@ const SUPPORT_TERMS = [
   "damaged", "broken", "laptop", "phone", "mobile", "headphone",
   "charger", "ram", "storage", "memory", "difference", "explain",
   "technology", "tell", "specifications", "specs", "features"
-]);
+];
 
 function normalize(text = "") {
   return String(text)
@@ -37,13 +37,12 @@ function normalize(text = "") {
     .trim();
 }
 
-// Find a product by name, SKU, or meaningful words in its name.
 function findBestProduct(message, products) {
   const query = normalize(message);
 
   if (!query) return null;
 
-  // First try exact product name or SKU.
+  // First check exact product names and SKUs.
   const exactMatch = products.find((product) => {
     const name = normalize(product.name || "");
     const sku = normalize(product.sku || "");
@@ -53,7 +52,7 @@ function findBestProduct(message, products) {
 
   if (exactMatch) return exactMatch;
 
-  // Match a complete product name inside a longer question.
+  // Check whether a complete product name or SKU appears in the question.
   const containedMatch = products.find((product) => {
     const name = normalize(product.name || "");
     const sku = normalize(product.sku || "");
@@ -105,7 +104,6 @@ function findBestProduct(message, products) {
     }
   }
 
-  // Avoid selecting a product based on a very weak match.
   return bestScore >= 0.5 ? bestProduct : null;
 }
 
@@ -152,7 +150,8 @@ function isProductListingQuestion(message) {
 
 function getProductPriceResponse(product) {
   const discount = Number(product.discount || 0);
-  const price = Number(product.price) * (1 - discount / 100);
+  const originalPrice = Number(product.price);
+  const price = originalPrice * (1 - discount / 100);
 
   return `${product.name} (${product.brand || "Generic"}) costs ₹${price.toFixed(2)}. ` +
     (discount > 0 ? `The listed discount is ${discount}%. ` : "") +
@@ -207,7 +206,7 @@ export const chatController = async (req, res) => {
         .lean()
     ]);
 
-    // Detect follow-up questions about a previously mentioned product.
+    // Find the product mentioned earlier in the conversation.
     const followUpText = normalize(originalMessage);
 
     const isSpecsFollowUp =
@@ -278,14 +277,14 @@ export const chatController = async (req, res) => {
 
     if (contextProduct && isDiscountFollowUp) {
       const discount = Number(contextProduct.discount || 0);
-      const finalPrice =
-        Number(contextProduct.price) * (1 - discount / 100);
+      const originalPrice = Number(contextProduct.price);
+      const finalPrice = originalPrice * (1 - discount / 100);
 
       return res.json({
         success: true,
         response: discount > 0
-          ? `${contextProduct.name} currently has a ${discount}% discount. The price after discount is ₹${finalPrice.toFixed(2)} (original price ₹${Number(contextProduct.price).toFixed(2)}).`
-          : `${contextProduct.name} has no discount listed right now. Its current price is ₹${Number(contextProduct.price).toFixed(2)}.`
+          ? `${contextProduct.name} currently has a ${discount}% discount. The price after discount is ₹${finalPrice.toFixed(2)} (original price ₹${originalPrice.toFixed(2)}).`
+          : `${contextProduct.name} has no discount listed right now. Its current price is ₹${originalPrice.toFixed(2)}.`
       });
     }
 
@@ -324,7 +323,7 @@ export const chatController = async (req, res) => {
       const searchableText = [
         faq.question || "",
         faq.category || "",
-        ...(faq.keywords || [])
+        ...(Array.isArray(faq.keywords) ? faq.keywords : [])
       ].join(" ");
 
       const score = getMatchScore(originalMessage, searchableText);
@@ -364,7 +363,7 @@ export const chatController = async (req, res) => {
 
     if (isProductListingQuestion(originalMessage)) {
       const availableProducts = products.filter(
-        (product) => product.stock > 0
+        (product) => Number(product.stock) > 0
       );
 
       if (availableProducts.length === 0) {
@@ -391,7 +390,7 @@ export const chatController = async (req, res) => {
       });
     }
 
-    // Use the same product matcher for every product query.
+    // Match product questions against the database.
     const matchedProduct = findBestProduct(originalMessage, products);
 
     if (matchedProduct) {
