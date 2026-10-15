@@ -328,7 +328,7 @@ export const chatController = async (req, res) => {
     }
 
     // 4. Don't use AI for unrelated questions.
-    if (!isSupportRelated(originalMessage)) {
+    if (!isSupportRelated(originalMessage) && !bestProduct && !exactProduct) {
       return res.json({
         success: true,
         response: "I'm here to help with products and customer-support questions. Please ask me about our products, prices, availability, orders, or support policies."
