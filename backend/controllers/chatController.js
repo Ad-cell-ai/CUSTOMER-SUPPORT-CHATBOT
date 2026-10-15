@@ -109,7 +109,15 @@ export const chatController = async (req, res) => {
     const isSpecsFollowUp = /\b(specification|specifications|specs|features|details|description)\b/.test(followUpText);
     const isDiscountFollowUp = /\b(discount|discounts|offer|offers|deal|deals)\b/.test(followUpText);
     const isSimilarFollowUp = /\b(similar|related|alternatives|alternative)\b/.test(followUpText);
-    const isProductFollowUp = isSpecsFollowUp || isDiscountFollowUp || isSimilarFollowUp;
+        const isPriceFollowUp =
+      /\b(price|cost|how much)\b/.test(followUpText) &&
+      /\b(that product|this product|it|its)\b/.test(followUpText);
+
+    const isProductFollowUp =
+      isSpecsFollowUp ||
+      isDiscountFollowUp ||
+      isSimilarFollowUp ||
+  isPriceFollowUp;
     let contextProduct = null;
 
 
@@ -302,7 +310,7 @@ export const chatController = async (req, res) => {
       }
     }
 
-    if (bestProduct && bestProductScore >= 0.45) {
+    if (bestProduct && bestProductScore >= 0.30) {
       const discountedPrice =
         bestProduct.price * (1 - (bestProduct.discount || 0) / 100);
 
@@ -316,6 +324,7 @@ export const chatController = async (req, res) => {
           `${bestProduct.discount > 0 ? ` The listed discount is ${bestProduct.discount}%.` : ""}`
       });
     }
+
 
     // 3. Don't use AI for obviously unrelated questions.
     const looksLikeProductCode = /\b[A-Z]{2,}\d{3,}\b/i.test(originalMessage);
